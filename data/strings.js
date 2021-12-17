@@ -70,6 +70,18 @@ var strings = {
 		"multi1": {
 			name: "Charisma booster",
 			description: "This little device will make your salespeople more charismatic, making them sell items for 25% more!"
-		}
+		},
+		"multi2": {
+			name: "Pure oxygen",
+			description: "Pumping pure oxygen into the store makes people want your products more. They'll purchase them for 50% more!"
+		},
+		"multi3": {
+			name: "Flashing lights",
+			description: "Flashing lights catch people's attention, causing them to rush over and buy items for 75% more!"
+		},
+		"multi4": {
+			name: "Items are always on sale",
+			description: "Customers flock to sales, even though the items are marked up by 100%!"
+		},
 	}
 }

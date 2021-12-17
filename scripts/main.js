@@ -51,6 +51,16 @@ function viewNPCShop(shopType) {
 }
 
 function viewYourShop() {
+	// Calculate your sale multiplier
+	var upgradeMultiplier = 1;
+	player.upgrades.forEach(function(element) {
+		var upgrade = upgrades[element];
+		if (upgrade.type == "multiplier") {
+			upgradeMultiplier += upgrade.value;
+		}
+	});
+	$('#saleMultiplier').html(upgradeMultiplier);
+	
 	// Display items
 	$('.your-shop-item-container').html("");
 	Object.keys(player.items).forEach(element => {
@@ -240,6 +250,8 @@ function buyUpgrade(upgrade) {
 		player.upgrades.push(upgrade.data('id'));
 		upgrades[upgrade.data('id')].purchased = true;
 	}
+	refreshView()
+	viewUpgrades();
 }
 
 function buyItem(item, quantity) {
