@@ -1,22 +1,29 @@
 // Player's game data
-var game = {
-	currentTime: 'morning',
-	day: 1
-};
 var player = {
 	money: 100,
 	items: {},
-	upgrades: []
+	upgrades: [],
+	sellQuantity: 1,
+}
+
+// Global game data
+var game = {
+	viewingShop: false,
+	tickInterval: null,
+	saleProgress: 0,
+	saleProgressRequired: 25,
 }
 
 // Add functionality
 $(function() {
 	$('.visit-shop').on('click', function() { viewNPCShop($(this).data('shop')) });
 	$('.shop').on('click', viewYourShop);
-	$('.npc-shop-item-container').on('change', '.purchase-item', calculateCost);
 	$('.upgrade-shop-item-container').on('click', '.buy-upgrade', function() { buyUpgrade($(this)) });
+	$('.npc-shop-item-container').on('click', '.buy-one', function() { buyItem($(this), 1) });
+	$('.npc-shop-item-container').on('click', '.buy-ten', function() { buyItem($(this), 10) });
+	$('.npc-shop-item-container').on('click', '.buy-max', function() { buyItem($(this), -1) });
 	$('.buy-upgrades').on('click', viewUpgrades);
-	$('#purchaseItems').on('click', purchaseItems);
+	game.tickInterval = setInterval(tick, 200);
 });
 
 // Game Functions
@@ -40,7 +47,6 @@ function viewNPCShop(shopType) {
 	});
 	
 	// Display Shop
-	calculateCost();
 	$('.npcShopView').show();
 }
 
@@ -120,11 +126,27 @@ function createCardForItem(item, isYourShop) {
 							.append($('<b></b>').append("Number Owned: "))
 							.append(item.quantity)
 					:
-						$('<input type="number" value="0">')
-							.addClass("form-control")
-							.addClass("purchase-item")
-							.data('id', item.id)
-							.data('price', item.purchaseCost)
+						$('<div></div>').append(
+							$('<button>Buy One</button>')
+								.addClass("btn btn-secondary")
+								.addClass("buy-one")
+								.data('id', item.id)
+								.data('price', item.purchaseCost)
+								.css('margin-right', '10px')
+						).append(
+							$('<button>Buy Ten</button>')
+								.addClass("btn btn-secondary")
+								.addClass("buy-ten")
+								.data('id', item.id)
+								.data('price', item.purchaseCost)
+								.css('margin-right', '10px')
+						).append(
+							$('<button>Buy Max</button>')
+								.addClass("btn btn-secondary")
+								.addClass("buy-max")
+								.data('id', item.id)
+								.data('price', item.purchaseCost)
+						)
 				)
 		)
 		.css("margin-bottom", "15px")
@@ -168,16 +190,6 @@ function createCardForUpgrade(upgrade) {
 	)
 }
 
-function calculateCost() {
-	var total = 0;
-	$('.purchase-item').each(function(i, element) {
-		total += $(element).val() * $(element).data('price');
-	});
-	$('#totalCost').html(total);
-	// Display warning if they don't have enough money
-	return total;
-}
-
 function getProductsForShop(shopType) {
 	productsForShop = [];
 	Object.keys(products).forEach(element => {
@@ -189,27 +201,6 @@ function getProductsForShop(shopType) {
 	return productsForShop;
 }
 
-function purchaseItems() {
-	var cost = calculateCost();
-	if (cost > player.money) {
-		return;
-	} else {
-		player.money -= cost;
-	}
-	$('.purchase-item').each(function(i, element) {
-		if ($(element).val() <= 0) {
-			return;
-		}
-		if (player.items[$(element).data('id')] == undefined) {
-			player.items[$(element).data('id')] = 0;
-		}
-		player.items[$(element).data('id')] += parseInt($(element).val());
-		$(element).val(0);
-	});
-	calculateCost();
-	refreshView();
-}
-
 function sellItems() {
 	var upgradeMultiplier = 1;
 	player.upgrades.forEach(function(element) {
@@ -218,18 +209,28 @@ function sellItems() {
 			upgradeMultiplier += upgrade.value;
 		}
 	});
-	console.log(upgradeMultiplier);
 	Object.keys(player.items).forEach(element => {
 		var item = products[element];
-		var quantity = player.items[element];
-		player.money += Math.floor(item.sellPrice * quantity * upgradeMultiplier);
-		delete player.items[element];
+		var quantity = Math.min(player.items[element], player.sellQuantity);
+		var roll = Math.floor(Math.random() * 100);
+		if (roll <= item.chanceOfSale) {
+			console.log("SoldItem");
+			player.money += Math.floor(item.sellPrice * quantity * upgradeMultiplier);
+			if (player.items[element] == quantity) {
+				delete player.items[element];
+			} else {
+				player.items[element] -= quantity;
+			}
+		}
 	});
 	refreshView();
 }
 
 function refreshView() {
 	$('#money').text(player.money);
+	if ($('.playerShopView').is(":visible")) {
+		viewYourShop();
+	}
 }
 
 function buyUpgrade(upgrade) {
@@ -239,4 +240,36 @@ function buyUpgrade(upgrade) {
 		player.upgrades.push(upgrade.data('id'));
 		upgrades[upgrade.data('id')].purchased = true;
 	}
+}
+
+function buyItem(item, quantity) {
+	var price = parseInt(item.data('price'))
+	if (price > player.money) {
+		return;
+	}
+	var id = item.data('id');
+	if (quantity == -1) {
+		quantity = Math.floor(player.money / price);
+	}
+	price = price * quantity;
+	if (player.money >= price) {
+		player.money -= price;
+		if (player.items[id] == undefined) {
+			player.items[id] = 0;
+		}
+		player.items[id] += quantity;
+	}
+	refreshView();
+}
+
+function tick() {
+	game.saleProgress++;
+	if (game.saleProgress >= game.saleProgressRequired) {
+		sellItems();
+		game.saleProgress = 0;
+	}
+	var percentage = game.saleProgress / game.saleProgressRequired;
+	percentage *= 100;
+	percentage = Math.floor(percentage);
+	$('#sale-progress-bar').css("width", percentage + "%");
 }
