@@ -11,7 +11,6 @@ var player = {
 
 // Add functionality
 $(function() {
-	$('.timeChange').on('click', changeTime);
 	$('.visit-shop').on('click', function() { viewNPCShop($(this).data('shop')) });
 	$('.shop').on('click', viewYourShop);
 	$('.npc-shop-item-container').on('change', '.purchase-item', calculateCost);
@@ -169,40 +168,13 @@ function createCardForUpgrade(upgrade) {
 	)
 }
 
-function changeTime() {
-	switch (game.currentTime) {
-		case 'morning':
-			game.currentTime = 'afternoon';
-			// Update available actions
-			$('.morning').hide();
-			$('.afternoon').show();
-			break;
-		case 'afternoon':
-			game.currentTime = 'evening';
-			// Update available actions
-			$('.afternoon').hide();
-			$('.evening').show();
-			break;
-		case 'evening':
-			game.day++;
-			game.currentTime = 'morning';
-			// Update available actions
-			$('.evening').hide();
-			$('.morning').show();
-			sellItems();
-			break;
-	}
-	refreshView();
-	// Hide whatever they were doing prior by bringing them to their shop
-	viewYourShop();
-}
-
 function calculateCost() {
 	var total = 0;
 	$('.purchase-item').each(function(i, element) {
 		total += $(element).val() * $(element).data('price');
 	});
 	$('#totalCost').html(total);
+	// Display warning if they don't have enough money
 	return total;
 }
 
@@ -232,12 +204,13 @@ function purchaseItems() {
 			player.items[$(element).data('id')] = 0;
 		}
 		player.items[$(element).data('id')] += parseInt($(element).val());
+		$(element).val(0);
 	});
-	changeTime();
+	calculateCost();
+	refreshView();
 }
 
 function sellItems() {
-
 	var upgradeMultiplier = 1;
 	player.upgrades.forEach(function(element) {
 		var upgrade = upgrades[element];
@@ -256,18 +229,14 @@ function sellItems() {
 }
 
 function refreshView() {
-	$('#day').text(game.day);
-	$('#time').text(strings[game.currentTime]);
 	$('#money').text(player.money);
 }
 
 function buyUpgrade(upgrade) {
-console.log(upgrade);
 	var price = parseInt(upgrade.data('price'))
 	if (player.money >= price) {
 		player.money -= price;
 		player.upgrades.push(upgrade.data('id'));
 		upgrades[upgrade.data('id')].purchased = true;
 	}
-	changeTime();
 }
